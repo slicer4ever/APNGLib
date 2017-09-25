@@ -1425,8 +1425,13 @@ static PyMethodDef APNGLibMethods[] = {
 #ifdef Py_InitModule
 PyMODINIT_FUNC
 PyInit_APNGLib(void){
-	(void)Py_InitModule("APNGLib", APNGLibMethods);
-	
+	PyObject *M = Py_InitModule("APNGLib", APNGLibMethods);
+	PyObject *Dict = PyModule_GetDict(M);
+	PyDict_SetItemString(Dict, "TransformNone", PyInt_FromLong(TransformNone));
+	PyDict_SetItemString(Dict, "TransformCrop", PyInt_FromLong(TransformCrop));
+	PyDict_SetItemString(Dict, "TransformFlipHorizontal", PyInt_FromLong(TransformFlipHorizontal));
+	PyDict_SetItemString(Dict, "TransformFlipVertical", PyInt_FromLong(TransformFlipVertical));
+	PyDict_SetItemString(Dict, "TransformNoGif1Frame", PyInt_FromLong(TransformNoGif1Frame));
 }
 #else
 /* Version 3.0+ python entry. */
@@ -1444,6 +1449,13 @@ static struct PyModuleDef APNGLibModule = {
 
 PyMODINIT_FUNC
 PyInit_APNGLib(void){
-	return PyModule_Create(&APNGLibModule);
+	PyObject *M = PyModule_Create(&APNGLibModule);
+	if(!M) return M;
+	if(PyModule_AddIntConstant(M, "TransformNone", TransformNone)) return NULL;
+	if(PyModule_AddIntConstant(M, "TransformCrop", TransformCrop)) return NULL;
+	if(PyModule_AddIntConstant(M, "TransformFlipHorizontal", TransformFlipHorizontal)) return NULL;
+	if(PyModule_AddIntConstant(M, "TransformFlipVertical", TransformFlipVertical)) return NULL;
+	if(PyModule_AddIntConstant(M, "TransformNoGif1Frame", TransformNoGif1Frame)) return NULL;
+	return M;
 }
 #endif
