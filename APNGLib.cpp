@@ -1271,8 +1271,8 @@ void save_png(char * szOut, APNGFrame * frame)
 
 void TransformPNG(APNGFrame &Frame, unsigned int TransformFlags, unsigned int xOffset, unsigned int yOffset, unsigned int xSize, unsigned int ySize){
 	if(TransformFlags==0) return;
-	unsigned int w = Frame->w;
-	unsigned int h = Frame->h;
+	unsigned int w = Frame.w;
+	unsigned int h = Frame.h;
 	unsigned int TexelSize = 4; //This library defaults to size of 4 for texelSize.
 	//First cull our new data!
 	
@@ -1281,12 +1281,12 @@ void TransformPNG(APNGFrame &Frame, unsigned int TransformFlags, unsigned int xO
 		png_bytep *Rows = new png_bytep[ySize];		
 		for(unsigned int y = 0;y<ySize;y++){
 			Rows[y] = (png_bytep)Texels+y*xSize*TexelSize;
-			memcpy(rows[y], frames[n].rows[y+yOffset]+xOffset*TexelSize, xSize*TexelSize);
+			memcpy(Rows[y], Frame.rows[y+yOffset]+xOffset*TexelSize, xSize*TexelSize);
 		}
-		delete[] Frame->rows; Frame->rows = Rows;
-		delete[] Frame->p; Frame->p = p;
-		Frame->w = xSize;
-		Frame->h = ySize;
+		delete[] Frame.rows; Frame.rows = Rows;
+		delete[] Frame.p; Frame.p = Texels;
+		Frame.w = xSize;
+		Frame.h = ySize;
 		w = xSize;
 		h = ySize;
 	}
@@ -1296,9 +1296,9 @@ void TransformPNG(APNGFrame &Frame, unsigned int TransformFlags, unsigned int xO
 			for(unsigned int x = 0;x<w/2;x++){
 				unsigned int p = w-(x+1);
 				for(unsigned int t = 0;t<TexelSize;t++){
-					unsigned char Temp = Frame->rows[y][x*TexelSize+t]
-					Frame->rows[y][x*TexelSize+t] = Frame->rows[y][p*TexelSize+t];
-					Frame->rows[y][p*TexelSize+t] = Temp;
+					unsigned char Temp = Frame.rows[y][x*TexelSize+t];
+					Frame.rows[y][x*TexelSize+t] = Frame.rows[y][p*TexelSize+t];
+					Frame.rows[y][p*TexelSize+t] = Temp;
 				}
 			}
 		}
@@ -1307,9 +1307,9 @@ void TransformPNG(APNGFrame &Frame, unsigned int TransformFlags, unsigned int xO
 		for(unsigned int y=0;y<h/2;y++){
 			unsigned int p = h-(y+1);
 			for(unsigned int x = 0;x<w*TexelSize;x++){
-				unsigned char Temp = Frame->rows[y][x];
-				Frame->rows[y][x] = Frame->rows[p][x];
-				Frame->rows[p][x] = Temp;
+				unsigned char Temp = Frame.rows[y][x];
+				Frame.rows[y][x] = Frame.rows[p][x];
+				Frame.rows[p][x] = Temp;
 			}
 		}
 	}
@@ -1331,7 +1331,7 @@ static PyObject *APNGLib_Decompile(PyObject *Self, PyObject *Args){
 	unsigned int NbrLoops;
 	if(!PyArg_ParseTuple(Args, "ssi", &InputFilename, &OutputFilename, &Transform)) return NULL;
 	if(Transform&TransformCrop){
-		if(!PyArg_ParseTuple(Args, "ssiiiii") &InputFilename, &OutputFilename, &Transform, &xOffset, &yOffset, &xSize, &ySize)) return NULL;
+		if(!PyArg_ParseTuple(Args, "ssiiiii", &InputFilename, &OutputFilename, &Transform, &xOffset, &yOffset, &xSize, &ySize)) return NULL;
 	}
 	strncpy(szInput, InputFilename, sizeof(szInput));
 	int res = load_apng(szInput, Frames, &NbrLoops);
@@ -1342,13 +1342,13 @@ static PyObject *APNGLib_Decompile(PyObject *Self, PyObject *Args){
 	unsigned int NbrFrames = Frames.size();
 	PyObject *List = PyList_New(NbrFrames);
 	for(unsigned int i=0;i<NbrFrames;i++){
-		snprintf(szOut, "%s%d.png", OutputFilename, i);
-		TransformPNG(Frames[n], Transform, xOffset, yOffset, xSize, ySize);
-		save_png(szOut, &Frames[n]);
-		double Duration = (double)Frames[n].delay_num/(double)frame->delay_den;
+		snprintf(szOut, sizeof(szOut), "%s%d.png", OutputFilename, i);
+		TransformPNG(Frames[i], Transform, xOffset, yOffset, xSize, ySize);
+		save_png(szOut, &Frames[i]);
+		double Duration = (double)Frames[i].delay_num/(double)Frames[i].delay_den;
 		PyList_SetItem(List, i, PyFloat_FromDouble(Duration));
-		delete[] Frames[n].rows;
-		delete[] Frames[n].p;
+		delete[] Frames[i].rows;
+		delete[] Frames[i].p;
 	}
 	Frames.clear();
 	return List;
@@ -1392,14 +1392,14 @@ static PyObject *APNGLib_MakeGIF(PyObject *Self, PyObject *Args){
 	if (!Frames.empty()){
 		NbrFrames = Frames.size();
 		for(size_t n=0;n<NbrFrames;n++) TransformPNG(Frames[n], Transform, xOffset, yOffset, xSize, ySize);
-		unsigned int w = frames[0].w;
-		unsigned int h = frames[0].h;
+		unsigned int w = Frames[0].w;
+		unsigned int h = Frames[0].h;
 		
 		unsigned char *pAGIF = new unsigned char[w * h * NbrFrames * 4];
 
 		apng_to_agif(Frames, pAGIF);
 
-		if (save_agif(szOut, Frames, pAGIF, num_loops) != 0){
+		if (save_agif(szOut, Frames, pAGIF, NbrLoops) != 0){
 		  printf("save_agif() failed: '%s'\n", szOut);
 		  return NULL;
 		}
@@ -1420,14 +1420,15 @@ static PyMethodDef APNGLibMethods[] = {
 	{"Decompile", APNGLib_Decompile, METH_VARARGS, "Decompiled a animated png file into a series of png's.  Decompile takes the following parameters: SourceFile, DestFileNaming(this function appends #.png to the file name}, TransformFlags, (Extra parameters if TransformCrop is set: xOffset, yOffset, xSize, ySize, bounds must be in frame size, otherwise no culling will occur)."},
 	{NULL, NULL, 0, NULL}
 };
-/* Version 2.0 python entry!
+/* Version 2.0 python entry! */
 
+#ifdef Py_InitModule
 PyMODINIT_FUNC
 PyInit_APNGLib(void){
 	(void)Py_InitModule("APNGLib", APNGLibMethods);
 	
-}*/
-
+}
+#else
 /* Version 3.0+ python entry. */
 static struct PyModuleDef APNGLibModule = {
 	PyModuleDef_HEAD_INIT,
@@ -1445,3 +1446,4 @@ PyMODINIT_FUNC
 PyInit_APNGLib(void){
 	return PyModule_Create(&APNGLibModule);
 }
+#endif

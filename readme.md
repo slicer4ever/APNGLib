@@ -40,6 +40,34 @@ if TransformFlag has TransformCrop set, then xOffset, yOffset, xSize, ySize must
 if TransformFlag has TransformNoGif1Frame set, then the function will not create a gif if only 1 frame is found to be in the png file.
   
 ------------------
+
+------------------
+Transform flags:
+
+``TransformNone``
+
+No transform is to occur.
+
+``TransformCrop``
+
+Crop the image, which means function expect xOffset, yOffset, xSize, ySize to also be passed.  if the bounds of the crop do not lie within the bounds of the image, then cropping will be ignored.
+
+Cropping is always the first operation to be done when transforming the image.
+
+``TransformFlipHorizontal``
+
+Flips the image horizontally, will occur after a crop if cropping is specefied.
+
+``TransformFlipVertical``
+
+Flips the image vertically, will occur after a crop if cropping is specefied.
+
+``TransformNoGif1Frame``
+
+Special flag for MakeGif that tells it not to make the gif if the apng only has 1 frame(basically the png is a regular png file.)
+
+
+
 Pip installation:
 pip install APNGLib
 

@@ -1,11 +1,18 @@
 from distutils.core import setup, Extension
 
-module1 = Extension('apng2gif',
+module = Extension('APNGLib',
 
 					libraries = ['stdc++', 'm', 'png', 'z'],
                     sources = ['APNGLib.cpp'])
 
-setup (name = 'APNG2gif',
+setup (name = 'APNGLib',
+	   packages = ['APNGLib'],
        version = '1.0',
        description = 'APNGLib a few tools for working with APNG files',
-       ext_modules = [module1])
+	   author = 'Tim Collins',
+	   author_email = 'tscollins321@aim.com',
+	   url = 'https://github.com/slicer4ever/APNGLib',
+	   download_url = 'https://github.com/slicer4ever/APNGLib/archive/1.0.tar.gz',
+	   keywords = ['APNG'],
+	   classifiers = [],
+       ext_modules = [module])
